@@ -1,44 +1,51 @@
-require('dotenv').config();
+require("dotenv").config();
 // const bodyParser = require('body-parser');
-const express = require('express'); // Express web server framework
-const request = require('request'); // "Request" library
-const cors = require('cors');
+const express = require("express"); // Express web server frameworkyarn
+const axios = require("axios");
+const cors = require("cors");
 
 const app = express();
 const router = express.Router();
-
-const client_id = process.env.client_id;
-const client_secret = process.env.client_secret;
 
 // app.use(bodyParser.json());
 // app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(cors());
 
-app.get('/auth', (req, res) => {
-  let auth_token;
-  const authOptions = {
-    url: 'https://accounts.spotify.com/api/token',
-    headers: {
-      'Authorization': 'Basic ' + (new Buffer(client_id + ':' + client_secret).toString('base64'))
-    },
-    form: {
-      grant_type: 'client_credentials'
-    },
-    json: true
-  };
+const buildCommonsArray = async commons => {
+  const commonsArray = commons.map(card => {
+    return card;
+  });
+  console.log(commonsArray);
+};
 
-  request.post(authOptions, (error, response, body) => {
-    if (!error && response.statusCode === 200) {
-      auth_token = body.access_token;
-      res.status(200).send({token: auth_token});
-    }
+const scryfallSearch = async () => {
+  try {
+    const url = "https://api.scryfall.com/cards/search";
+    const response = await axios.get(url, {
+      params: {
+        q: "s:hou r:c not:pwdeck"
+      }
+    });
+    return response.data;
+    // buildCommonsArray(response.data);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+app.get("/", (req, res) => {
+  console.log("HELLO!");
+  scryfallSearch().then(commons => {
+    console.log(commons);
   });
 });
 
-app.listen(process.env.PORT || 3000, () => {
-  // eslint-disable-next-line no-console
+app.listen(process.env.PORT, () => {
+  console.info(`Server started on ${process.env.PORT}`);
 });
+
+module.exports = app;
 
 // "use strict";
 
@@ -55,7 +62,7 @@ app.listen(process.env.PORT || 3000, () => {
 // const getCommonsBySetCode = setCode => {
 //   let commonsArray = [];
 //   Scry.Cards.search(`s:${setCode} r:c not:pwdeck`).on("data", card => {
-//     console.log(card.id); 
+//     console.log(card.id);
 //     commonsArray.push(card.id);
 //   });
 //   console.log(commonsArray);
