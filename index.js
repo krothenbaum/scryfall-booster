@@ -3,6 +3,7 @@ require("dotenv").config();
 const express = require("express"); // Express web server frameworkyarn
 const axios = require("axios");
 const cors = require("cors");
+const fs = require("fs");
 
 const app = express();
 const router = express.Router();
@@ -24,7 +25,7 @@ const scryfallSearch = async () => {
     const url = "https://api.scryfall.com/cards/search";
     const response = await axios.get(url, {
       params: {
-        q: "s:hou r:c not:pwdeck"
+        q: "s:rix not:pwdeck"
       }
     });
     return response.data;
@@ -36,8 +37,10 @@ const scryfallSearch = async () => {
 
 app.get("/", (req, res) => {
   console.log("HELLO!");
-  scryfallSearch().then(commons => {
-    console.log(commons);
+  scryfallSearch().then(set => {
+    const xln = JSON.stringify(set.data);
+    console.log(xln);
+    fs.writeFileSync("rix.json", xln);
   });
 });
 
