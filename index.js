@@ -20,12 +20,13 @@ const buildCommonsArray = async commons => {
   console.log(commonsArray);
 };
 
-const scryfallSearch = async () => {
+const getSetData = async () => {
   try {
     const url = "https://api.scryfall.com/cards/search";
     const response = await axios.get(url, {
       params: {
-        q: "s:rix not:pwdeck"
+        q: "s:xln not:pwdeck",
+        page: 2
       }
     });
     return response.data;
@@ -35,13 +36,29 @@ const scryfallSearch = async () => {
   }
 };
 
-app.get("/", (req, res) => {
-  console.log("HELLO!");
-  scryfallSearch().then(set => {
+const getBooster = async () => {
+  console.log("GENERATING BOOSTER...");
+  //get if foil
+  //if foil === true get 9 uncommons and 1 foil Mythic, Rare, Uncommon, or Common
+  //else get 10 commons
+  //get 3 uncommons
+  //get Rare or Mythic - 1 in 8 mythic rare
+  //get 1 basic land
+  //return booster
+};
+
+app.get("/setdata", (req, res) => {
+  console.log("Writing set data to JSON");
+  getSetData().then(set => {
     const xln = JSON.stringify(set.data);
-    console.log(xln);
-    fs.writeFileSync("rix.json", xln);
+    fs.writeFileSync("xln2.json", xln);
   });
+});
+
+app.get("/booster", (req, res) => {
+  console.log("BOOSTER");
+  const set = "xln";
+  const booster = getBooster(set);
 });
 
 app.listen(process.env.PORT, () => {
@@ -49,30 +66,3 @@ app.listen(process.env.PORT, () => {
 });
 
 module.exports = app;
-
-// "use strict";
-
-// const Scry = require("scryfall-sdk");
-
-// const getRandomCard = async () => {
-//   return await Scry.Cards.random();
-// };
-
-// const buildRandomCommons = commons => {
-//   console.log(commons.name);
-// };
-
-// const getCommonsBySetCode = setCode => {
-//   let commonsArray = [];
-//   Scry.Cards.search(`s:${setCode} r:c not:pwdeck`).on("data", card => {
-//     console.log(card.id);
-//     commonsArray.push(card.id);
-//   });
-//   console.log(commonsArray);
-// };
-
-// const generateBooster = setCode => {
-//   getCommonsBySetCode(setCode);
-// };
-
-// generateBooster("hou");
