@@ -10,23 +10,48 @@ const foil = () => {
   return false;
 };
 
-const getCommons = async (set, num) => {
-  console.log("GETTING COMMONS");
-  let commonsArray = [];
-  const count = await Card.count({ set: set }).then(count => { return count });
+const getUncommons = async (set, num) => {
+  console.log("GETTING UNCOMMONS");
+  let uncommonsArray = [];
+  const query = { set: set, rarity: "uncommon" };
+  const count = await Card.count(query).then(count => {
+    return count;
+  });
 
   for (let i = 0; i < num; i++) {
     const random = Math.floor(Math.random() * count);
-    const card = await Card
-      .find({ set: set, rarity: "common" })
+    const card = await Card.findOne(query)
       .skip(random)
       .exec()
-      .then(common => { return common });
-    console.log(`CARD IS ${card}`);
+      .then(uncommon => {
+        return uncommon;
+      });
+    uncommonsArray.push(card);
+  }
+
+  return uncommonsArray;
+};
+
+const getCommons = async (set, num) => {
+  console.log("GETTING COMMONS");
+  let commonsArray = [];
+  const query = { set: set, rarity: "common" };
+  const count = await Card.count(query).then(count => {
+    return count;
+  });
+
+  for (let i = 0; i < num; i++) {
+    const random = Math.floor(Math.random() * count);
+    const card = await Card.findOne(query)
+      .skip(random)
+      .exec()
+      .then(common => {
+        return common;
+      });
     commonsArray.push(card);
   }
 
-  return;
+  return commonsArray;
 };
 
 const getFoil = set => {
@@ -37,7 +62,8 @@ const getFoil = set => {
 const get = async (req, res, next) => {
   console.log("BOOSTER GET FUNCTION");
   const set = req.params.set;
-
+  let commons,
+    uncommons = [];
   console.log(`SET is ${set}`);
   /*
     Build a random booster
@@ -50,16 +76,15 @@ const get = async (req, res, next) => {
     */
 
   if (foil()) {
-    getCommons(set, 9);
+    commons = await getCommons(set, 9);
     getFoil(set);
   } else {
-    getCommons(set, 10);
+    commons = await getCommons(set, 10);
   }
 
-  //   getUncommons(set, 3);
+  uncommons = getUncommons(set, 3);
   //   getRareOrMythic(set);
   //   getBasicLand(set);
-  // console.log(`COMMONS ARE ${commons[0]}`);
   res.status(200);
 };
 
