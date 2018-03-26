@@ -5,6 +5,10 @@ const CardSchema = new mongoose.Schema(
     name: {
       type: String,
       required: true
+    },
+    rarity: {
+      type: String,
+      required: true
     }
   },
   {

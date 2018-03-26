@@ -10,6 +10,40 @@ const foil = () => {
   return false;
 };
 
+const mythic = () => {
+  const random = Math.random();
+  console.log(`Mythic Random is ${random}`);
+  if (random < 0.126) {
+    return true;
+  }
+  return false;
+}
+
+const getRareOrMythic = async (set, rarity) => {
+  const query = {
+    set: set,
+    rarity: rarity
+  };
+
+  const count = await Card
+    .count(query)
+    .then(count => {
+      return count;
+    });
+
+  const random = Math.floor(Math.random() * count);
+
+  const card = await Card
+    .findOne(query)
+    .skip(random)
+    .exec()
+    .then(card => {
+      return card;
+    });
+
+  return card;
+}
+
 const getUncommons = async (set, num) => {
   console.log("GETTING UNCOMMONS");
   let uncommonsArray = [];
@@ -35,8 +69,15 @@ const getUncommons = async (set, num) => {
 const getCommons = async (set, num) => {
   console.log("GETTING COMMONS");
   let commonsArray = [];
-  const query = { set: set, rarity: "common" };
+  const query = {
+    set: set,
+    rarity: "common",
+    type_line: {
+      $not: /^(basic land).*/i
+    }
+  };
   const count = await Card.count(query).then(count => {
+    console.log(`COUNT ${count}`)
     return count;
   });
 
@@ -63,8 +104,10 @@ const get = async (req, res, next) => {
   console.log("BOOSTER GET FUNCTION");
   const set = req.params.set;
   let commons,
-    uncommons = [];
-  console.log(`SET is ${set}`);
+    uncommons,
+    rareOrMythic,
+    booster = [];
+  // console.log(`SET is ${set}`);
   /*
     Build a random booster
     check if foil
@@ -82,10 +125,25 @@ const get = async (req, res, next) => {
     commons = await getCommons(set, 10);
   }
 
-  uncommons = getUncommons(set, 3);
-  //   getRareOrMythic(set);
+  uncommons = await getUncommons(set, 3);
+
+  if (mythic()) {
+    rareOrMythic = await getRareOrMythic(set, "mythic");
+  } else {
+    rareOrMythic = await getRareOrMythic(set, "rare");
+  }
+
+  // console.log(`Commons ${commons}`);
+  // console.log(`Uncommons ${uncommons}`);
+  // console.log(`Rare or Mythic ${rareOrMythic} `);
+  booster = booster.concat(commons, uncommons, rareOrMythic);
+
+  //
+  booster.forEach(card => {
+    console.log(`${card.name} - ${card.rarity}`);
+  })
   //   getBasicLand(set);
-  res.status(200);
+  res.status(200).send(booster);
 };
 
 module.exports = { get };
