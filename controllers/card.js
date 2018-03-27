@@ -2,14 +2,7 @@ const Card = require("../models/card");
 
 const get = async (req, res, next) => {
   console.log("Controller get function");
-  // return res.json(req.card);
-  // Card.get()
-  //   .then(card => {
-  //     console.log(card);
-  //   })
-  //   .catch(error => {
-  //     console.error(error);
-  //   });
+
   await Card.findOne({ name: "Adanto Vanguard" })
     .exec()
     .then(card => {

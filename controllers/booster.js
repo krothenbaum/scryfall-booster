@@ -1,8 +1,7 @@
 const Card = require("../models/card");
 
-const foil = () => {
+const checkFoil = async () => {
   const random = Math.random();
-  console.log(`RANDOM NUMBER IS ${random}`);
   if (random < 0.24) {
     return true;
   }
@@ -10,14 +9,13 @@ const foil = () => {
   return false;
 };
 
-const mythic = () => {
+const checkMythic = async () => {
   const random = Math.random();
-  console.log(`Mythic Random is ${random}`);
   if (random < 0.126) {
     return true;
   }
   return false;
-}
+};
 
 const getRareOrMythic = async (set, rarity) => {
   const query = {
@@ -25,16 +23,13 @@ const getRareOrMythic = async (set, rarity) => {
     rarity: rarity
   };
 
-  const count = await Card
-    .count(query)
-    .then(count => {
-      return count;
-    });
+  const count = await Card.count(query).then(count => {
+    return count;
+  });
 
   const random = Math.floor(Math.random() * count);
 
-  const card = await Card
-    .findOne(query)
+  const card = await Card.findOne(query)
     .skip(random)
     .exec()
     .then(card => {
@@ -42,20 +37,28 @@ const getRareOrMythic = async (set, rarity) => {
     });
 
   return card;
-}
+};
 
 const getUncommons = async (set, num) => {
-  console.log("GETTING UNCOMMONS");
   let uncommonsArray = [];
+  let randomArray = [];
+  let n = 0;
   const query = { set: set, rarity: "uncommon" };
   const count = await Card.count(query).then(count => {
     return count;
   });
 
-  for (let i = 0; i < num; i++) {
+  while (n < num) {
     const random = Math.floor(Math.random() * count);
+    if (randomArray.indexOf(random) == -1) {
+      randomArray.push(random);
+      n++;
+    }
+  }
+
+  for (let i = 0; i < num; i++) {
     const card = await Card.findOne(query)
-      .skip(random)
+      .skip(randomArray[i])
       .exec()
       .then(uncommon => {
         return uncommon;
@@ -67,8 +70,11 @@ const getUncommons = async (set, num) => {
 };
 
 const getCommons = async (set, num) => {
-  console.log("GETTING COMMONS");
   let commonsArray = [];
+  let randomArray = [];
+
+  let n = 0;
+
   const query = {
     set: set,
     rarity: "common",
@@ -76,18 +82,31 @@ const getCommons = async (set, num) => {
       $not: /^(basic land).*/i
     }
   };
+
   const count = await Card.count(query).then(count => {
-    console.log(`COUNT ${count}`)
     return count;
   });
 
-  for (let i = 0; i < num; i++) {
+  while (n < num) {
     const random = Math.floor(Math.random() * count);
+    if (randomArray.indexOf(random) == -1) {
+      randomArray.push(random);
+      n++;
+    }
+  }
+  // console.log(randomArray);
+  // console.log(commonsArray);
+
+  for (let i = 0; i < num; i++) {
+    // console.log(randomArray[i]);
     const card = await Card.findOne(query)
-      .skip(random)
+      .skip(randomArray[i])
       .exec()
       .then(common => {
         return common;
+      })
+      .catch(error => {
+        console.error(`Error getting commmons: ${error}`);
       });
     commonsArray.push(card);
   }
@@ -95,19 +114,70 @@ const getCommons = async (set, num) => {
   return commonsArray;
 };
 
-const getFoil = set => {
+const getBasicLand = async set => {
+  const query = {
+    set: set,
+    type_line: /^(basic land).*/i
+  };
+
+  const count = await Card.count(query).then(count => {
+    return count;
+  });
+
+  const random = Math.floor(Math.random() * count);
+
+  const land = await Card.findOne(query)
+    .skip(random)
+    .then(card => {
+      return card;
+    });
+
+  return land;
+};
+
+const getFoil = async set => {
   console.log("GETTING FOIL");
-  return;
+  const random = Math.random();
+  console.log(random);
+  let foilArray = [];
+
+  switch (true) {
+    case random < 1 / 128:
+      console.log("Mythic");
+      foilArray = await getRareOrMythic(set, "mythic");
+      break;
+    case random < 7 / 128:
+      console.log("RARE");
+      foilArray = await getRareOrMythic(set, "rare");
+      break;
+    case random < 1 / 16:
+      console.log("BASIC");
+      foilArray = await getBasicLand(set);
+      break;
+    case random < 3 / 16:
+      console.log("UNCOMMON");
+      foilArray = await getUncommons(set, 1);
+      break;
+    default:
+      console.log("COMMON");
+      foilArray = await getCommons(set, 1);
+      break;
+  }
+
+  return foilArray;
 };
 
 const get = async (req, res, next) => {
-  console.log("BOOSTER GET FUNCTION");
   const set = req.params.set;
-  let commons,
+  const hasFoil = await checkFoil();
+  const hasMythic = await checkMythic();
+  let land,
+    commons,
     uncommons,
     rareOrMythic,
+    foil,
     booster = [];
-  // console.log(`SET is ${set}`);
+
   /*
     Build a random booster
     check if foil
@@ -117,32 +187,33 @@ const get = async (req, res, next) => {
     get one Mythic or rare
     get one basic land
     */
-
-  if (foil()) {
+  console.log(hasFoil);
+  land = await getBasicLand(set);
+  if (hasFoil) {
     commons = await getCommons(set, 9);
-    getFoil(set);
+    foil = await getFoil(set);
   } else {
     commons = await getCommons(set, 10);
   }
 
   uncommons = await getUncommons(set, 3);
 
-  if (mythic()) {
+  if (hasMythic) {
     rareOrMythic = await getRareOrMythic(set, "mythic");
   } else {
     rareOrMythic = await getRareOrMythic(set, "rare");
   }
 
-  // console.log(`Commons ${commons}`);
-  // console.log(`Uncommons ${uncommons}`);
-  // console.log(`Rare or Mythic ${rareOrMythic} `);
-  booster = booster.concat(commons, uncommons, rareOrMythic);
+  if (hasFoil) {
+    booster = booster.concat(land, commons, uncommons, rareOrMythic, foil);
+  } else {
+    booster = booster.concat(land, commons, uncommons, rareOrMythic);
+  }
 
-  //
   booster.forEach(card => {
     console.log(`${card.name} - ${card.rarity}`);
-  })
-  //   getBasicLand(set);
+  });
+
   res.status(200).send(booster);
 };
 
